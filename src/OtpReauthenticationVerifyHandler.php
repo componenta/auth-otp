@@ -10,9 +10,8 @@ use Componenta\Auth\DeniedReasonInterface;
 use Componenta\Auth\Http\DeniedResponseFactoryInterface;
 use Componenta\Auth\Otp\Denied\InvalidCode;
 use Componenta\Auth\Session\AuthSession;
-use Componenta\Auth\Session\AuthSessionManagerInterface;
+use Componenta\Auth\Session\AuthenticatedSessionIssuer;
 use Componenta\Auth\Session\Http\AuthSessionGrantPublisher;
-use Componenta\Auth\Session\RotationReason;
 use Componenta\Identity\IdentityInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -25,7 +24,7 @@ final readonly class OtpReauthenticationVerifyHandler implements
     public function __construct(
         private OtpExtractor $extractor,
         private AuthenticatorInterface $authenticator,
-        private AuthSessionManagerInterface $sessions,
+        private AuthenticatedSessionIssuer $sessionIssuer,
         private AuthSessionGrantPublisher $publisher,
         private DeniedResponseFactoryInterface $deniedResponses,
         private ResponseFactoryInterface $responses,
@@ -73,10 +72,10 @@ final readonly class OtpReauthenticationVerifyHandler implements
             ?? throw new \LogicException(
                 'Successful OTP reauthentication must contain evidence.',
             );
-        $grant = $this->sessions->rotate(
+        $grant = $this->sessionIssuer->reauthenticate(
             $session,
+            $currentIdentity,
             $otpEvidence,
-            RotationReason::Reauthentication,
         );
 
         return $this->publisher->publish($request, $response, $grant);
