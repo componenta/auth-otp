@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Componenta\Auth\Otp;
 
-use Componenta\Auth\AuthenticationEvidence;
 use Componenta\Auth\AuthenticatorInterface;
 use Componenta\Auth\Context;
 use Componenta\Auth\DeniedReasonInterface;
@@ -74,19 +73,9 @@ final readonly class OtpReauthenticationVerifyHandler implements
             ?? throw new \LogicException(
                 'Successful OTP reauthentication must contain evidence.',
             );
-        $evidence = new AuthenticationEvidence(
-            methods: array_values(array_unique([
-                ...$session->evidence->methods,
-                ...$otpEvidence->methods,
-            ])),
-            capabilities: array_values(array_unique([
-                ...$session->evidence->capabilities,
-                ...$otpEvidence->capabilities,
-            ])),
-        );
         $grant = $this->sessions->rotate(
             $session,
-            $evidence,
+            $otpEvidence,
             RotationReason::Reauthentication,
         );
 
