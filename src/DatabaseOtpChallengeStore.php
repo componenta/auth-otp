@@ -47,7 +47,7 @@ final readonly class DatabaseOtpChallengeStore implements OtpChallengeStoreInter
                 ->from(self::CHALLENGE_TABLE)
                 ->where('subject_uuid', $challenge->subjectId->toString())
                 ->where('purpose', $challenge->purpose->value)
-                ->where('binding', $challenge->binding)
+                ->where('channel', $challenge->channel->value)
                 ->orderBy('created_at', 'DESC')
                 ->limit(1)
                 ->run()
@@ -66,11 +66,31 @@ final readonly class DatabaseOtpChallengeStore implements OtpChallengeStoreInter
                 );
             }
 
-            $this->database->delete(self::CHALLENGE_TABLE)
+            $cutoff = $challenge->createdAt->modify(
+                sprintf('-%d seconds', $config->issueWindowSeconds),
+            );
+            $recentIssues = $this->database->select()
+                ->from(self::CHALLENGE_TABLE)
+                ->where('subject_uuid', $challenge->subjectId->toString())
+                ->where('purpose', $challenge->purpose->value)
+                ->where('channel', $challenge->channel->value)
+                ->where('created_at', '>', $this->format($cutoff))
+                ->count();
+
+            if ($recentIssues >= $config->maxIssuesPerWindow) {
+                throw new OtpIssueThrottledException(
+                    'OTP issue budget is exhausted.',
+                );
+            }
+
+            $this->database->update(self::CHALLENGE_TABLE)
                 ->where('subject_uuid', $challenge->subjectId->toString())
                 ->where('purpose', $challenge->purpose->value)
                 ->where('binding', $challenge->binding)
                 ->where('consumed_at', null)
+                ->values([
+                    'consumed_at' => $this->format($challenge->createdAt),
+                ])
                 ->run();
 
             $this->database->insert(self::CHALLENGE_TABLE)->values([

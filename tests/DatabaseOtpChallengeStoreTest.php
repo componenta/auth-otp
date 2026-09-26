@@ -113,6 +113,75 @@ final class DatabaseOtpChallengeStoreTest extends TestCase
         );
     }
 
+    public function testResendCooldownCannotBeBypassedWithNewBinding(): void
+    {
+        self::requireSqlite();
+        $manager = self::manager(new OtpConfig(
+            resendCooldownSeconds: 30,
+        ));
+        $subject = Uuid::fromString(
+            '018f6d5d-3f7a-7a9b-8c2f-123456789abc',
+        );
+        $purpose = new OtpPurpose('authentication');
+        $channel = new OtpChannel('email');
+
+        $manager->issue(
+            Uuid::fromString('018f6d5d-3f7a-7a9b-8c2f-123456789aa1'),
+            $subject,
+            $purpose,
+            $channel,
+            'binding-a',
+        );
+
+        $this->expectException(OtpIssueThrottledException::class);
+
+        $manager->issue(
+            Uuid::fromString('018f6d5d-3f7a-7a9b-8c2f-123456789aa2'),
+            $subject,
+            $purpose,
+            $channel,
+            'binding-b',
+        );
+    }
+
+    public function testIssueBudgetSurvivesDifferentBindings(): void
+    {
+        self::requireSqlite();
+        $manager = self::manager(new OtpConfig(
+            resendCooldownSeconds: 0,
+            maxIssuesPerWindow: 2,
+            issueWindowSeconds: 3600,
+        ));
+        $subject = Uuid::fromString(
+            '018f6d5d-3f7a-7a9b-8c2f-123456789abc',
+        );
+        $purpose = new OtpPurpose('authentication');
+        $channel = new OtpChannel('email');
+
+        foreach ([
+            ['018f6d5d-3f7a-7a9b-8c2f-123456789aa1', 'binding-a'],
+            ['018f6d5d-3f7a-7a9b-8c2f-123456789aa2', 'binding-b'],
+        ] as [$challenge, $binding]) {
+            $manager->issue(
+                Uuid::fromString($challenge),
+                $subject,
+                $purpose,
+                $channel,
+                $binding,
+            );
+        }
+
+        $this->expectException(OtpIssueThrottledException::class);
+
+        $manager->issue(
+            Uuid::fromString('018f6d5d-3f7a-7a9b-8c2f-123456789aa3'),
+            $subject,
+            $purpose,
+            $channel,
+            'binding-c',
+        );
+    }
+
     public function testResendCooldownIsSerialized(): void
     {
         self::requireSqlite();

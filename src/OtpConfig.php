@@ -11,6 +11,8 @@ final readonly class OtpConfig
         public int $ttlSeconds = 300,
         public int $maxAttempts = 5,
         public int $resendCooldownSeconds = 30,
+        public int $maxIssuesPerWindow = 5,
+        public int $issueWindowSeconds = 3600,
         public int $aggregateFailureLimit = 10,
         public int $aggregateWindowSeconds = 3600,
     ) {
@@ -36,6 +38,21 @@ final readonly class OtpConfig
         ) {
             throw new \InvalidArgumentException(
                 'OTP resend cooldown is invalid.',
+            );
+        }
+
+        if ($maxIssuesPerWindow < 1 || $maxIssuesPerWindow > 100) {
+            throw new \InvalidArgumentException(
+                'OTP issue limit is invalid.',
+            );
+        }
+
+        if (
+            $issueWindowSeconds < $ttlSeconds
+            || $issueWindowSeconds > 86_400
+        ) {
+            throw new \InvalidArgumentException(
+                'OTP issue window is invalid.',
             );
         }
 
