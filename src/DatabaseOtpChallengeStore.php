@@ -7,6 +7,7 @@ namespace Componenta\Auth\Otp;
 use Componenta\Identity\Uuid;
 use Componenta\Identity\UuidInterface;
 use Cycle\Database\DatabaseInterface;
+use Cycle\Database\Injection\Fragment;
 use Cycle\Database\Query\OnConflict;
 use DateTimeImmutable;
 use DateTimeZone;
@@ -43,7 +44,10 @@ final readonly class DatabaseOtpChallengeStore implements OtpChallengeStoreInter
                 $challenge->purpose,
             );
 
-            $latest = $this->database->select('created_at')
+            $latest = $this->database->select('created_at')->withDriver(
+                $this->database->getDriver(DatabaseInterface::WRITE),
+                $this->database->getPrefix(),
+            )
                 ->from(self::CHALLENGE_TABLE)
                 ->where('subject_uuid', $challenge->subjectId->toString())
                 ->where('purpose', $challenge->purpose->value)
@@ -69,7 +73,10 @@ final readonly class DatabaseOtpChallengeStore implements OtpChallengeStoreInter
             $cutoff = $challenge->createdAt->modify(
                 sprintf('-%d seconds', $config->issueWindowSeconds),
             );
-            $recentIssues = $this->database->select()
+            $recentIssues = $this->database->select()->withDriver(
+                $this->database->getDriver(DatabaseInterface::WRITE),
+                $this->database->getPrefix(),
+            )
                 ->from(self::CHALLENGE_TABLE)
                 ->where('subject_uuid', $challenge->subjectId->toString())
                 ->where('purpose', $challenge->purpose->value)
@@ -125,7 +132,10 @@ final readonly class DatabaseOtpChallengeStore implements OtpChallengeStoreInter
             $verifier,
             $config,
         ): OtpVerification {
-            $row = $this->database->select()
+            $row = $this->database->select()->withDriver(
+                $this->database->getDriver(DatabaseInterface::WRITE),
+                $this->database->getPrefix(),
+            )
                 ->from(self::CHALLENGE_TABLE)
                 ->where('uuid', $challengeId->toString())
                 ->run()
@@ -194,18 +204,13 @@ final readonly class DatabaseOtpChallengeStore implements OtpChallengeStoreInter
                 return OtpVerification::verified($subjectId, $channel);
             }
 
-            $this->database->execute(
-                'UPDATE ' . self::CHALLENGE_TABLE
-                    . ' SET attempts = attempts + 1'
-                    . ' WHERE uuid = ?'
-                    . ' AND consumed_at IS NULL'
-                    . ' AND attempts < max_attempts'
-                    . ' AND expires_at > ?',
-                [
-                    $challengeId->toString(),
-                    $this->format($now),
-                ],
-            );
+            $this->database->update(self::CHALLENGE_TABLE)
+                ->where('uuid', $challengeId->toString())
+                ->where('consumed_at', null)
+                ->where('attempts', '<', new Fragment('max_attempts'))
+                ->where('expires_at', '>', $this->format($now))
+                ->values(['attempts' => new Fragment('attempts + 1')])
+                ->run();
             $failures = $this->recordFailure($subjectId, $purpose);
 
             return $failures >= $config->aggregateFailureLimit
@@ -232,7 +237,10 @@ final readonly class DatabaseOtpChallengeStore implements OtpChallengeStoreInter
         }
 
         $now = $this->format($this->now());
-        $rows = $this->database->select('uuid')
+        $rows = $this->database->select('uuid')->withDriver(
+                $this->database->getDriver(DatabaseInterface::WRITE),
+                $this->database->getPrefix(),
+            )
             ->from(self::CHALLENGE_TABLE)
             ->where(static function (mixed $query) use ($now): void {
                 if (!$query instanceof \Cycle\Database\Query\SelectQuery) {
@@ -278,12 +286,11 @@ final readonly class DatabaseOtpChallengeStore implements OtpChallengeStoreInter
             OnConflict::target('subject_uuid', 'purpose')->doNothing(),
         )->run();
 
-        $affected = $this->database->execute(
-            'UPDATE ' . self::BUDGET_TABLE
-                . ' SET lock_version = lock_version + 1'
-                . ' WHERE subject_uuid = ? AND purpose = ?',
-            [$subject, $purpose->value],
-        );
+        $affected = $this->database->update(self::BUDGET_TABLE)
+            ->where('subject_uuid', $subject)
+            ->where('purpose', $purpose->value)
+            ->values(['lock_version' => new Fragment('lock_version + 1')])
+            ->run();
 
         if ($affected !== 1) {
             throw new \RuntimeException('Could not acquire OTP budget lock.');
@@ -316,7 +323,10 @@ final readonly class DatabaseOtpChallengeStore implements OtpChallengeStoreInter
         OtpPurpose $purpose,
         OtpConfig $config,
     ): bool {
-        $row = $this->database->select('failures')
+        $row = $this->database->select('failures')->withDriver(
+                $this->database->getDriver(DatabaseInterface::WRITE),
+                $this->database->getPrefix(),
+            )
             ->from(self::BUDGET_TABLE)
             ->where('subject_uuid', $subjectId->toString())
             ->where('purpose', $purpose->value)
@@ -332,13 +342,15 @@ final readonly class DatabaseOtpChallengeStore implements OtpChallengeStoreInter
         UuidInterface $subjectId,
         OtpPurpose $purpose,
     ): int {
-        $this->database->execute(
-            'UPDATE ' . self::BUDGET_TABLE
-                . ' SET failures = failures + 1'
-                . ' WHERE subject_uuid = ? AND purpose = ?',
-            [$subjectId->toString(), $purpose->value],
-        );
-        $row = $this->database->select('failures')
+        $this->database->update(self::BUDGET_TABLE)
+            ->where('subject_uuid', $subjectId->toString())
+            ->where('purpose', $purpose->value)
+            ->values(['failures' => new Fragment('failures + 1')])
+            ->run();
+        $row = $this->database->select('failures')->withDriver(
+                $this->database->getDriver(DatabaseInterface::WRITE),
+                $this->database->getPrefix(),
+            )
             ->from(self::BUDGET_TABLE)
             ->where('subject_uuid', $subjectId->toString())
             ->where('purpose', $purpose->value)
