@@ -154,9 +154,9 @@ final readonly class DatabaseOtpChallengeStore implements OtpChallengeStoreInter
             $channel = new OtpChannel(
                 self::stringValue($row, 'channel'),
             );
-            $now = $this->now();
-
             $this->acquireBudgetLock($subjectId, $purpose);
+            // The lock can wait beyond the proof's expiry or budget window.
+            $now = $this->now();
             $this->resetExpiredBudget($subjectId, $purpose, $now, $config);
 
             if ($this->budgetReached($subjectId, $purpose, $config)) {
