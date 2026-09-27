@@ -78,6 +78,10 @@ final readonly class OtpReauthenticationVerifyHandler implements
             $otpEvidence,
         );
 
+        if ($grant instanceof DeniedReasonInterface) {
+            return $this->deniedResponses->create($grant);
+        }
+
         return $this->publisher->publish($request, $response, $grant);
     }
 }
