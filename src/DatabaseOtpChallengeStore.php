@@ -236,12 +236,18 @@ final readonly class DatabaseOtpChallengeStore implements OtpChallengeStoreInter
             );
         }
 
-        $now = $this->format($this->now());
+        $instant = $this->now();
+        $now = $this->format($instant);
+        // Expiry ends authentication validity, not the rolling issuance budget.
+        $retentionCutoff = $this->format($instant->modify(
+            sprintf('-%d seconds', OtpConfig::MAX_ISSUE_WINDOW_SECONDS),
+        ));
         $rows = $this->database->select('uuid')->withDriver(
                 $this->database->getDriver(DatabaseInterface::WRITE),
                 $this->database->getPrefix(),
             )
             ->from(self::CHALLENGE_TABLE)
+            ->where('created_at', '<=', $retentionCutoff)
             ->where(static function (mixed $query) use ($now): void {
                 if (!$query instanceof \Cycle\Database\Query\SelectQuery) {
                     throw new \LogicException(

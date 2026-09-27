@@ -6,6 +6,8 @@ namespace Componenta\Auth\Otp;
 
 final readonly class OtpConfig
 {
+    public const int MAX_ISSUE_WINDOW_SECONDS = 86_400;
+
     public function __construct(
         public int $digits = 6,
         public int $ttlSeconds = 300,
@@ -49,7 +51,7 @@ final readonly class OtpConfig
 
         if (
             $issueWindowSeconds < $ttlSeconds
-            || $issueWindowSeconds > 86_400
+            || $issueWindowSeconds > self::MAX_ISSUE_WINDOW_SECONDS
         ) {
             throw new \InvalidArgumentException(
                 'OTP issue window is invalid.',
