@@ -13,7 +13,7 @@ final readonly class OtpSubmission implements \JsonSerializable
         #[\SensitiveParameter]
         public string $code,
     ) {
-        if (preg_match('/\A[0-9]{6,8}\z/D', $code) !== 1) {
+        if (preg_match('/\A[0-9]{4,8}\z/D', $code) !== 1) {
             throw new \InvalidArgumentException('OTP code is invalid.');
         }
     }
