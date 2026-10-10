@@ -19,7 +19,7 @@ Security properties:
 - generic public invalid-code denial;
 - channel-specific evidence never upgrades itself to MFA/phishing resistance.
 
-## Version 2 compatibility
+## Version 2.0.1 compatibility
 
 Version 2.0.0 requires `componenta/auth-session-http ^2.0.1`. Its browser
 security contract uses `componenta/http-csrf-middleware ^3.0`, which validates
