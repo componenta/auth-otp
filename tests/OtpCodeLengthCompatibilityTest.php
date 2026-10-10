@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Componenta\Auth\Otp\Tests;
 
-use Componenta\Auth\Otp\{DatabaseOtpChallengeStore, OtpChallengeManager, OtpChannel, OtpCodeGenerator, OtpCodeMac, OtpConfig, OtpPurpose, OtpVerificationStatus};
+use Componenta\Auth\Otp\{DatabaseOtpChallengeStore, OtpChallengeManager, OtpChannel, OtpCodeGenerator, OtpCodeMac, OtpConfig, OtpPurpose, OtpSubmission, OtpVerificationStatus};
 use Componenta\Auth\Otp\Tests\Support\SqliteDatabaseFixture;
 use Componenta\Clock\FrozenClock;
 use Componenta\Identity\Uuid;
@@ -81,6 +81,7 @@ final class OtpCodeLengthCompatibilityTest extends TestCase
             $purpose, new OtpChannel('email'), $binding,
         );
         self::assertSame($digits, strlen($issue->code));
+        self::assertSame($issue->code, (new OtpSubmission($issue->challenge->uuid, $issue->code))->code);
         self::assertSame(
             OtpVerificationStatus::Verified,
             $manager->verify($issue->challenge->uuid, $purpose, $binding, $issue->code)->status,
