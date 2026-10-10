@@ -18,8 +18,8 @@ final readonly class OtpConfig
         public int $aggregateFailureLimit = 10,
         public int $aggregateWindowSeconds = 3600,
     ) {
-        if ($digits < 6 || $digits > 8) {
-            throw new \InvalidArgumentException('OTP digits must be 6-8.');
+        if ($digits < 4 || $digits > 8) {
+            throw new \InvalidArgumentException('OTP digits must be 4-8.');
         }
 
         if ($ttlSeconds < 30 || $ttlSeconds > 600) {
