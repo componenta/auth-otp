@@ -8,8 +8,8 @@ final readonly class OtpCodeGenerator
 {
     public function generate(int $digits): string
     {
-        if ($digits < 6 || $digits > 8) {
-            throw new \InvalidArgumentException('OTP digits must be 6-8.');
+        if ($digits < 4 || $digits > 8) {
+            throw new \InvalidArgumentException('OTP digits must be 4-8.');
         }
 
         $max = (10 ** $digits) - 1;
