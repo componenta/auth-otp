@@ -9,7 +9,7 @@ current public AuthSession UUID.
 
 Security properties:
 
-- CSPRNG 6-8 digit codes;
+- CSPRNG numeric codes: 4-8 digits when explicitly configured, six digits by default; for new deployments prefer six or more and retain bounded abuse limits;
 - HMAC-SHA-256 verifier with challenge/purpose domain separation;
 - plaintext code is never persisted;
 - single-use atomic verification;
