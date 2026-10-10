@@ -1,5 +1,17 @@
 # Changelog
 
+## v2.0.1 (2026-10-11)
+
+- Restore configurable **4–8 digit OTP** compatibility for existing consumers;
+  the default remains **6 digits** and new deployments should prefer at least
+  six with bounded issue, verification and aggregate abuse limits.
+- The shared CSPRNG code generator, configuration and challenge verifier now
+  agree on the selected code length. No second generator or changed
+  challenge/session issuer is introduced.
+- Retain auth-session-http ^2.0.1 and CSRF v3 compatibility.
+- Test single-use verification and rejection of invalid lengths for 4–8 digits.
+
+
 ## v2.0.0 — coordinated session-http 2 / CSRF v3 migration (2026-10-10)
 
 ### Dependency compatibility
