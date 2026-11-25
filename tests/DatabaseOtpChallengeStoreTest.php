@@ -81,7 +81,7 @@ final class DatabaseOtpChallengeStoreTest extends TestCase
                 $first->challenge->uuid,
                 $purpose,
                 $binding,
-                str_repeat('0', $config->digits),
+                strtr($first->code, '0123456789', '1234567890'),
             )->status,
         );
 
@@ -99,7 +99,7 @@ final class DatabaseOtpChallengeStoreTest extends TestCase
                 $second->challenge->uuid,
                 $purpose,
                 $binding,
-                str_repeat('0', $config->digits),
+                strtr($second->code, '0123456789', '1234567890'),
             )->status,
         );
         self::assertSame(
