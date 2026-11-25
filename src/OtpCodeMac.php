@@ -36,4 +36,10 @@ final readonly class OtpCodeMac
             $this->key,
         );
     }
+
+    /** @return array{key: string} */
+    public function __debugInfo(): array
+    {
+        return ['key' => '[REDACTED]'];
+    }
 }

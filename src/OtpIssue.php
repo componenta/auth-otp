@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Componenta\Auth\Otp;
 
-final readonly class OtpIssue
+final readonly class OtpIssue implements \JsonSerializable
 {
     public function __construct(
         public OtpChallenge $challenge,
@@ -23,5 +23,12 @@ final readonly class OtpIssue
             'challengeId' => $this->challenge->uuid->toString(),
             'code' => '[REDACTED]',
         ];
+    }
+
+    /** @return array{challengeId: string, code: string} */
+    #[\Override]
+    public function jsonSerialize(): array
+    {
+        return $this->__debugInfo();
     }
 }

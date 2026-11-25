@@ -6,7 +6,7 @@ namespace Componenta\Auth\Otp;
 
 use Componenta\Identity\UuidInterface;
 
-final readonly class OtpPayload
+final readonly class OtpPayload implements \JsonSerializable
 {
     public function __construct(
         public UuidInterface $challengeId,
@@ -22,5 +22,23 @@ final readonly class OtpPayload
         ) {
             throw new \InvalidArgumentException('OTP binding is invalid.');
         }
+    }
+
+    /** @return array{challengeId: string, code: string, purpose: string, binding: string} */
+    public function __debugInfo(): array
+    {
+        return [
+            'challengeId' => $this->challengeId->toString(),
+            'code' => '[REDACTED]',
+            'purpose' => $this->purpose->value,
+            'binding' => $this->binding,
+        ];
+    }
+
+    /** @return array{challengeId: string, code: string, purpose: string, binding: string} */
+    #[\Override]
+    public function jsonSerialize(): array
+    {
+        return $this->__debugInfo();
     }
 }

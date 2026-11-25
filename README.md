@@ -19,6 +19,11 @@ Security properties:
 - generic public invalid-code denial;
 - channel-specific evidence never upgrades itself to MFA/phishing resistance.
 
+OTP payloads and issued codes redact the code in JSON and `var_dump` output;
+the MAC calculator also redacts its key from `var_dump`. Delivery adapters
+must explicitly read `OtpIssue::$code` to send a code. Generic serialization
+is not a delivery format.
+
 ## Version 2.0.1 compatibility
 
 Version 2.0.0 requires `componenta/auth-session-http ^2.0.1`. Its browser
