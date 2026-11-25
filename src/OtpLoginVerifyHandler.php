@@ -7,6 +7,7 @@ namespace Componenta\Auth\Otp;
 use Componenta\Auth\AuthenticatorInterface;
 use Componenta\Auth\Context;
 use Componenta\Auth\DeniedReasonInterface;
+use Componenta\Auth\Http\CredentialTransportState;
 use Componenta\Auth\Http\DeniedResponseFactoryInterface;
 use Componenta\Auth\Otp\Denied\InvalidCode;
 use Componenta\Auth\Session\AuthenticatedSessionIssuer;
@@ -73,6 +74,12 @@ final readonly class OtpLoginVerifyHandler implements RequestHandlerInterface
             return $this->preAuthenticationPublisher->clear(
                 $this->deniedResponses->create(new InvalidCode()),
             );
+        }
+
+        $transportState = $request->getAttribute(CredentialTransportState::class);
+
+        if ($transportState instanceof CredentialTransportState) {
+            $transportState->discardQueued();
         }
 
         $grant = $this->sessionIssuer->issue(
