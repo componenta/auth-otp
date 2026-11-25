@@ -18,15 +18,95 @@ use Componenta\Identity\Uuid;
 use Componenta\Identity\UuidFactoryInterface;
 use DateTimeImmutable;
 use Nyholm\Psr7\Factory\Psr17Factory;
+use Nyholm\Psr7\Response;
 use Nyholm\Psr7\ServerRequest;
 use Nyholm\Psr7\Stream;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\StreamInterface;
 
 final class OtpLoginRequestHandlerTest extends TestCase
 {
+    /** @return iterable<string, array{string}> */
+    public static function responseStreams(): iterable
+    {
+        foreach (['complete', 'partial', 'stalled', 'throwing'] as $mode) {
+            yield $mode => [$mode];
+        }
+    }
+
+    #[DataProvider('responseStreams')]
+    public function testCompleteBodyIsPreparedBeforeCreatingOrQueuingAGrant(string $mode): void
+    {
+        $grant = self::grant();
+        $created = 0;
+        $queued = 0;
+        $manager = $this->createStub(PreAuthenticationManagerInterface::class);
+        $manager->method('create')->willReturnCallback(static function () use (&$created, $grant): PreAuthenticationGrant {
+            ++$created;
+
+            return $grant;
+        });
+        $queue = $this->createStub(OtpRequestQueueInterface::class);
+        $queue->method('enqueue')->willReturnCallback(static function () use (&$queued): void {
+            ++$queued;
+        });
+        $sink = new class {
+            public string $body = '';
+            public int $calls = 0;
+        };
+        $failure = new \RuntimeException('Synthetic stream failure.');
+        $stream = $this->createStub(StreamInterface::class);
+        $stream->method('write')->willReturnCallback(static function (string $bytes) use ($sink, $mode, $failure): int {
+            if (++$sink->calls > 1) {
+                if ($mode === 'stalled') {
+                    return 0;
+                }
+                if ($mode === 'throwing') {
+                    throw $failure;
+                }
+            }
+
+            $written = $mode === 'complete' ? strlen($bytes) : min(7, strlen($bytes));
+            $sink->body .= substr($bytes, 0, $written);
+
+            return $written;
+        });
+        $stream->method('__toString')->willReturnCallback(static fn(): string => $sink->body);
+        $responses = $this->createStub(ResponseFactoryInterface::class);
+        $responses->method('createResponse')->willReturn(new Response(200, [], $stream));
+        $failureObserved = null;
+        $response = null;
+
+        try {
+            $response = $this->handler($manager, $queue, $responses)->handle(self::request());
+        } catch (\RuntimeException $exception) {
+            $failureObserved = $exception;
+        }
+
+        if (in_array($mode, ['stalled', 'throwing'], true)) {
+            self::assertInstanceOf(\RuntimeException::class, $failureObserved, 'Incomplete response must not be returned as success.');
+            self::assertNull($response);
+            self::assertSame(0, $created);
+            self::assertSame(0, $queued);
+            if ($mode === 'throwing') {
+                self::assertSame($failure, $failureObserved);
+            }
+
+            return;
+        }
+
+        self::assertNull($failureObserved);
+        self::assertInstanceOf(ResponseInterface::class, $response);
+        self::assertSame(200, $response->getStatusCode());
+        self::assertJson((string) $response->getBody());
+        self::assertArrayHasKey('challenge_id', json_decode((string) $response->getBody(), true, flags: JSON_THROW_ON_ERROR));
+        self::assertSame(1, $created);
+        self::assertSame(1, $queued);
+    }
+
     /** @return iterable<string, array{string}> */
     public static function failedPublicationHeaders(): iterable
     {

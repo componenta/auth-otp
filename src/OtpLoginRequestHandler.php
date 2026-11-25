@@ -79,9 +79,7 @@ final readonly class OtpLoginRequestHandler implements RequestHandlerInterface
     private function json(int $status, array $payload): ResponseInterface
     {
         $response = $this->responses->createResponse($status);
-        $response->getBody()->write(
-            json_encode($payload, JSON_THROW_ON_ERROR),
-        );
+        JsonResponseBody::write($response, $payload);
 
         return $response
             ->withHeader('Content-Type', 'application/json')
