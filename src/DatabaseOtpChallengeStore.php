@@ -222,8 +222,10 @@ final readonly class DatabaseOtpChallengeStore implements OtpChallengeStoreInter
     #[\Override]
     public function revoke(UuidInterface $challengeId): void
     {
-        $this->database->delete(self::CHALLENGE_TABLE)
+        $this->database->update(self::CHALLENGE_TABLE)
             ->where('uuid', $challengeId->toString())
+            ->where('consumed_at', null)
+            ->values(['consumed_at' => $this->format($this->now())])
             ->run();
     }
 

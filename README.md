@@ -24,6 +24,10 @@ the MAC calculator also redacts its key from `var_dump`. Delivery adapters
 must explicitly read `OtpIssue::$code` to send a code. Generic serialization
 is not a delivery format.
 
+Revoking a challenge, including after a delivery failure, invalidates its code
+while retaining the issuance history for cooldown and issuance-window limits.
+Cleanup removes that history only after the maximum supported window has ended.
+
 ## Version 2.0.1 compatibility
 
 Version 2.0.0 requires `componenta/auth-session-http ^2.0.1`. Its browser
