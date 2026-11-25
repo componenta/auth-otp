@@ -54,16 +54,15 @@ final readonly class OtpLoginRequestHandler implements RequestHandlerInterface
         $grant = $this->preAuthentication->create(
             $this->preAuthenticationTtlSeconds,
         );
-        $response = $this->publisher->publish($response, $grant);
-        $work = new OtpRequest(
-            challengeId: $challengeId,
-            identity: $identity,
-            purpose: $this->purpose,
-            channel: $this->channel,
-            binding: $grant->transaction->uuid->toString(),
-        );
-
         try {
+            $response = $this->publisher->publish($response, $grant);
+            $work = new OtpRequest(
+                challengeId: $challengeId,
+                identity: $identity,
+                purpose: $this->purpose,
+                channel: $this->channel,
+                binding: $grant->transaction->uuid->toString(),
+            );
             $this->queue->enqueue($work);
         } catch (\Throwable $exception) {
             $this->preAuthentication->consume(
