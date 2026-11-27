@@ -198,9 +198,15 @@ final readonly class DatabaseOtpChallengeStore implements OtpChallengeStoreInter
                     return [OtpVerification::invalid(), null];
                 }
 
-                $this->database->delete(self::BUDGET_TABLE)
+                // Keep the mutex row: another request may already have passed
+                // its no-op INSERT and be waiting to acquire this same lock.
+                $this->database->update(self::BUDGET_TABLE)
                     ->where('subject_uuid', $subjectId->toString())
                     ->where('purpose', $purpose->value)
+                    ->values([
+                        'failures' => 0,
+                        'window_started_at' => $this->format($now),
+                    ])
                     ->run();
 
                 return [OtpVerification::verified($subjectId, $channel), $expiresAt];

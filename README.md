@@ -28,6 +28,13 @@ Revoking a challenge, including after a delivery failure, invalidates its code
 while retaining the issuance history for cooldown and issuance-window limits.
 Cleanup removes that history only after the maximum supported window has ended.
 
+A successful proof resets the subject+purpose failure budget in place. The row
+also coordinates concurrent issuance and verification, so it is retained after
+success instead of being deleted while another operation is acquiring its lock.
+The SQL lock ends with the transaction. Storage retains one budget row per used
+subject+purpose pair, containing counters and coordination state, not OTP codes;
+challenge cleanup does not prune these rows.
+
 A correct code is accepted only if its claim completes before the challenge
 deadline, including transaction commit. A claim that finishes at or after expiry
 is rejected and stays consumed; database or clock exceptions propagate.

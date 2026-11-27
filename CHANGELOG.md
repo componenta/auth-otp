@@ -6,6 +6,9 @@
 
 - Reject a correct OTP when its claim finishes at or after expiry, including
   a delayed transaction commit. The claimed code stays consumed.
+- Reset the aggregate failure budget without deleting its synchronization row.
+  A concurrent valid issuance or verification no longer loses the row between
+  its no-op INSERT and lock UPDATE. Keep one row per used subject+purpose pair.
 
 ### Dependency compatibility
 
