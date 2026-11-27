@@ -126,12 +126,12 @@ final readonly class DatabaseOtpChallengeStore implements OtpChallengeStoreInter
     ): OtpVerification {
         self::assertVerifier($verifier);
 
-        return $this->database->transaction(function () use (
+        [$verification, $expiresAt] = $this->database->transaction(function () use (
             $challengeId,
             $binding,
             $verifier,
             $config,
-        ): OtpVerification {
+        ): array {
             $row = $this->database->select()->withDriver(
                 $this->database->getDriver(DatabaseInterface::WRITE),
                 $this->database->getPrefix(),
@@ -142,7 +142,7 @@ final readonly class DatabaseOtpChallengeStore implements OtpChallengeStoreInter
                 ->fetch();
 
             if (!is_array($row)) {
-                return OtpVerification::invalid();
+                return [OtpVerification::invalid(), null];
             }
 
             $subjectId = Uuid::fromString(
@@ -160,17 +160,19 @@ final readonly class DatabaseOtpChallengeStore implements OtpChallengeStoreInter
             $this->resetExpiredBudget($subjectId, $purpose, $now, $config);
 
             if ($this->budgetReached($subjectId, $purpose, $config)) {
-                return OtpVerification::rateLimited();
+                return [OtpVerification::rateLimited(), null];
             }
+
+            $expiresAt = $this->date(self::stringValue($row, 'expires_at'));
 
             if (
                 !hash_equals(self::stringValue($row, 'binding'), $binding)
                 || ($row['consumed_at'] ?? null) !== null
-                || $this->date(self::stringValue($row, 'expires_at')) <= $now
+                || $expiresAt <= $now
                 || self::intValue($row, 'attempts')
                     >= self::intValue($row, 'max_attempts')
             ) {
-                return OtpVerification::invalid();
+                return [OtpVerification::invalid(), null];
             }
 
             if (
@@ -193,7 +195,7 @@ final readonly class DatabaseOtpChallengeStore implements OtpChallengeStoreInter
                     ->run();
 
                 if ($affected !== 1) {
-                    return OtpVerification::invalid();
+                    return [OtpVerification::invalid(), null];
                 }
 
                 $this->database->delete(self::BUDGET_TABLE)
@@ -201,7 +203,7 @@ final readonly class DatabaseOtpChallengeStore implements OtpChallengeStoreInter
                     ->where('purpose', $purpose->value)
                     ->run();
 
-                return OtpVerification::verified($subjectId, $channel);
+                return [OtpVerification::verified($subjectId, $channel), $expiresAt];
             }
 
             $this->database->update(self::CHALLENGE_TABLE)
@@ -213,10 +215,18 @@ final readonly class DatabaseOtpChallengeStore implements OtpChallengeStoreInter
                 ->run();
             $failures = $this->recordFailure($subjectId, $purpose);
 
-            return $failures >= $config->aggregateFailureLimit
-                ? OtpVerification::rateLimited()
-                : OtpVerification::invalid();
+            return [
+                $failures >= $config->aggregateFailureLimit
+                    ? OtpVerification::rateLimited()
+                    : OtpVerification::invalid(),
+                null,
+            ];
         });
+
+        // Claiming the proof and committing its transaction can both wait.
+        return $expiresAt !== null && $expiresAt <= $this->now()
+            ? OtpVerification::invalid()
+            : $verification;
     }
 
     #[\Override]

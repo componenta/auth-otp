@@ -28,6 +28,10 @@ Revoking a challenge, including after a delivery failure, invalidates its code
 while retaining the issuance history for cooldown and issuance-window limits.
 Cleanup removes that history only after the maximum supported window has ended.
 
+A correct code is accepted only if its claim completes before the challenge
+deadline, including transaction commit. A claim that finishes at or after expiry
+is rejected and stays consumed; database or clock exceptions propagate.
+
 ## Requirements
 
 PHP 8.4 or newer and the coordinated Componenta Auth 4 dependencies:

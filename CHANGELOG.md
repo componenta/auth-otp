@@ -2,6 +2,11 @@
 
 ## Unreleased (3.0.0)
 
+### Fixed
+
+- Reject a correct OTP when its claim finishes at or after expiry, including
+  a delayed transaction commit. The claimed code stays consumed.
+
 ### Dependency compatibility
 
 - Require Componenta Auth 4, Auth Session 2 and Auth Session HTTP 3, including
