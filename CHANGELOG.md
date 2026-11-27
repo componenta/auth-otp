@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased (3.0.0)
+
+### Dependency compatibility
+
+- Require Componenta Auth 4, Auth Session 2 and Auth Session HTTP 3, including
+  the CSRF 4 browser transport. Upgrade the authentication packages together;
+  the previous Auth 3 and Session HTTP 2 dependency families are incompatible.
+- Require `componenta/identity ^1.1.1` and test with `componenta/clock ^1.2.0`.
+- Require `componenta/auth-http ^2.0.0` for the shared credential transport.
+
 ## v2.0.1 (2026-10-11)
 
 - Restore configurable **4–8 digit OTP** compatibility for existing consumers;

@@ -1,6 +1,6 @@
 # Componenta Auth OTP
 
-Generic one-time-code challenges for Componenta Auth 3.
+Generic one-time-code challenges for Componenta Auth 4.
 
 OTP is a proof mechanism, not an email-login package. Purpose and channel are
 bounded extensible identifiers. Browser login binds the challenge to a
@@ -28,14 +28,13 @@ Revoking a challenge, including after a delivery failure, invalidates its code
 while retaining the issuance history for cooldown and issuance-window limits.
 Cleanup removes that history only after the maximum supported window has ended.
 
-## Version 2.0.1 compatibility
+## Requirements
 
-Version 2.0.0 requires `componenta/auth-session-http ^2.0.1`. Its browser
-security contract uses `componenta/http-csrf-middleware ^3.0`, which validates
-Origin/Referer on unsafe requests and rejects missing origin metadata by
-default. Upgrade the session HTTP and CSRF packages together; do not disable
-origin validation to preserve older clients.
+PHP 8.4 or newer and the coordinated Componenta Auth 4 dependencies:
+`componenta/auth ^4.0.0`, `componenta/auth-session ^2.0.0` and
+`componenta/auth-session-http ^3.0.0`. The browser transport uses
+`componenta/http-csrf-middleware ^4.0.0`. Unsafe CSRF-protected requests require
+valid Origin/Referer evidence and an admitted CSRF token.
 
-See [the changelog](CHANGELOG.md) for migration details. Session issuance
-continues to use the shared Componenta Auth session APIs; this package does
-not create an independent session or CSRF stack.
+Upgrade these packages together. Session issuance uses the shared Componenta
+Auth session APIs. See [CHANGELOG.md](CHANGELOG.md) for migration details.
